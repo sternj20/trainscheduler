@@ -19,97 +19,61 @@ var destinationInput;
 var timeInput;
 var frequencyInput;
 var firebaseData;
-
-function render(array){
-	for(var i = 0; i < trains.length; i++){
-	var tr = $("<tr>");
-	//create tds for each corresponding value
-	var tdName = $("<td>").text(trains[i].name);
-	var tdDest = $("<td>").text(trains[i].destination);
-	var tdFreq = $("<td>").text(trains[i].frequency);
-	var tdNext = $("<td>");
-	var tdMins = $("<td>");
-	//append tds to tr
-	tr.append(tdName);
-	tr.append(tdDest);
-	tr.append(tdFreq);
-	//prepend tr to table containing all train data
-	$(".data").prepend(tr);
-}
-}
+var timeFormat = "hh:mm";
 
 //add a new train to firebase
 function newTrain(event){
 	event.preventDefault();
-	train = {};
 
 	//variables for inputs
-	nameInput = $(".name");
-	destinationInput = $(".destination");
-	timeInput = $(".time");
-	frequencyInput = $(".freq");
+	nameInput = $(".name").val().trim();
+	destinationInput = $(".destination").val().trim();
+	timeInput = $(".time").val().trim();
+	frequencyInput = $(".freq").val().trim();
+	
+	//pushing each new traim to firebase object
+	database.ref().push({
+		name:nameInput,
+		destination: destinationInput,
+		time: timeInput,
+		frequency: frequencyInput
+	});
 
-	//adding our inputs into global variable trains
-	train.name = nameInput.val().trim();
-	train.destination = destinationInput.val().trim();
-	train.frequency = frequencyInput.val().trim();
-	trains.push(train);
 
 	//clearing input fields
-	nameInput.val('');
-	destinationInput.val(' ');
-	timeInput.val(' ');
-	frequencyInput.val(' ');
+	$(".name").val('');
+	$(".destination").val(' ');
+	$(".time").val(' ');
+	$(".freq").val(' ');
 
-	//storing global variable trains on firebase inside object trainData
-	database.ref().set({
-		trainData: trains
-	});
 }
 
-//get data from firebase and show in document
-//when a value in our database is changed
-database.ref().on("value", function(snapshot) {
-	//empty data on document
-	$(".data").empty();
-	//reference to train data in firebase object
-	firebaseData = snapshot.val().trainData;
-	trains = firebaseData;
-	//iterate through the children in firebase object
-	render();
+//getting our data from firebase 
+database.ref().on("child_added", function(snapshot) {
+	//moment.js math for calculating train time 
+	 var tFrequency = snapshot.val().frequency;
+	 var firstTime = snapshot.val().time;
+	 var firstTimeConverted = moment(firstTime, timeFormat).subtract(1, "years");
+	 var current = moment();
+	 var diffTime = moment().diff(moment(firstTimeConverted), "minutes");
+	 var remainder = diffTime % tFrequency;
+	 var minutes = tFrequency - remainder;
+     var nextTrain = moment().add(minutes, "minutes");
+
+    //render data 
+    var tr = $("<tr>");
+	tr.append("<td>" + snapshot.val().name + "</td>");
+	tr.append("<td>" + snapshot.val().destination + "</td>");
+	tr.append("<td>" + snapshot.val().frequency + "</td>");
+	tr.append("<td>" + nextTrain.format(timeFormat) + "</td>");
+	tr.append("<td>" + minutes + "</td>");
+	$(".data").append(tr);
 	
 });
 
 
+
 //event handlers
 $(".submit").on("click", newTrain);
-
-//function calls
-render();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// //functions	
-// function getTrainTime(current, first, frequency){
-// 	var difference = current - first;
-// 	var diffMins = difference * 60;
-// 	var travelNum = diffMins/frequency;
-// 	travelNum++;
-// 	var travelHrs = (travelNum * frequency)/60;
-// 	return travelHrs + first;
-// }
-
-//show our trains in document
+   
+   
