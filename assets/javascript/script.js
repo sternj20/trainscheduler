@@ -12,6 +12,7 @@ firebase.initializeApp(config);
 
 
 //variables
+
 var database = firebase.database();
 var trains;
 var nameInput;
@@ -19,7 +20,9 @@ var destinationInput;
 var timeInput;
 var frequencyInput;
 var firebaseData;
-var timeFormat = "hh:mm";
+var timeFormat = "HH:mm:ss";
+var nextTrain;
+var setTime;
 
 //add a new train to firebase
 function newTrain(event){
@@ -50,30 +53,55 @@ function newTrain(event){
 
 //getting our data from firebase 
 database.ref().on("child_added", function(snapshot) {
+	
 	//moment.js math for calculating train time 
-	 var tFrequency = snapshot.val().frequency;
-	 var firstTime = snapshot.val().time;
-	 var firstTimeConverted = moment(firstTime, timeFormat).subtract(1, "years");
-	 var current = moment();
-	 var diffTime = moment().diff(moment(firstTimeConverted), "minutes");
-	 var remainder = diffTime % tFrequency;
-	 var minutes = tFrequency - remainder;
-     var nextTrain = moment().add(minutes, "minutes");
+	var tFrequency = snapshot.val().frequency;
+	var firstTime = snapshot.val().time;
+	var firstTimeConverted = moment(firstTime, timeFormat).subtract(1, "years");
+	var current = moment();
+	var diffTime = moment().diff(moment(firstTimeConverted), "minutes");
+	var remainder = diffTime % tFrequency;
+	var minutes = tFrequency - remainder;
+	nextTrain = moment().add(minutes, "minutes");
 
     //render data 
     var tr = $("<tr>");
-	tr.append("<td>" + snapshot.val().name + "</td>");
-	tr.append("<td>" + snapshot.val().destination + "</td>");
-	tr.append("<td>" + snapshot.val().frequency + "</td>");
-	tr.append("<td>" + nextTrain.format(timeFormat) + "</td>");
-	tr.append("<td>" + minutes + "</td>");
-	$(".data").append(tr);
-	
+    tr.append("<td>" + snapshot.val().name + "</td>");
+    tr.append("<td>" + snapshot.val().destination + "</td>");
+    tr.append("<td>" + snapshot.val().frequency + "</td>");
+    tr.append("<td class = 'nextTrainTime'>" + nextTrain.format(timeFormat) + "</td>");
+    tr.append("<td class = 'minsAway'>" + minutes + "</td>");
+    $(".data").append(tr);
 });
 
 
+// timer function
+function timer(){
+	setTime = setInterval(timerCount, 1000);
+}
+
+//countdown 
+function timerCount(){
+	//iterate over all of the next train time values
+	for (var i = 0; i < $(".nextTrainTime").length; i++){
+		nextTime = $(".nextTrainTime")[i].innerText;
+		nextTime = moment(nextTime, timeFormat);
+		//subtract one second from each next train time value
+		nextTime = nextTime.subtract(1, "second").format(timeFormat);
+		//update dom
+		$(".nextTrainTime")[i].innerText = nextTime;
+	}
+}
+
+function stopTimer(){
+	clearInterval(setTime);
+}
 
 //event handlers
 $(".submit").on("click", newTrain);
-   
-   
+
+//function calls
+timer();
+
+
+
